@@ -1,20 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"flag"
+	"github.com/3boku/Go-Server/init/cmd"
 )
 
+var configPathFlag = flag.String("confg", "config.toml", "config file not found")
+
 func main() {
-	http.HandleFunc("/", helloworld)
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Println("에러 발생")
-		panic(err)
-		return
-	}
-}
-
-func helloworld(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Hello, world")
+	flag.Parse()
+	cmd.NewCmd(*configPathFlag)
 }
