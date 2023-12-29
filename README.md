@@ -241,7 +241,7 @@ func (n *Network) ServerStart(port string) error {
 	return n.engine.Run(port)
 }
 
-//resister 추가 함수들
+//resister 추가 함수
 func (n *Network) registerGET(path string, handler ...gin.HandlerFunc) gin.IRoutes {
 	return n.engine.GET(path, handler...)
 }
