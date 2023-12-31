@@ -241,7 +241,7 @@ func (n *Network) ServerStart(port string) error {
 	return n.engine.Run(port)
 }
 
-//resister 추가 함수
+//resister 추가 함수`
 func (n *Network) registerGET(path string, handler ...gin.HandlerFunc) gin.IRoutes {
 	return n.engine.GET(path, handler...)
 }
@@ -258,4 +258,91 @@ func (n *Network) registerDELTE(path string, handler ...gin.HandlerFunc) gin.IRo
 	return n.engine.DELETE(path, handler...)
 }
 
+```
+
+## 7번째 영상
+```go
+// network/utils.go
+
+package network
+
+import "github.com/gin-gonic/gin"
+
+//resister 추가 함수들
+
+func (n *Network) ServerStart(port string) error {
+	return n.engine.Run(port)
+}
+
+func (n *Network) registerGET(path string, handler ...gin.HandlerFunc) gin.IRoutes {
+	return n.engine.GET(path, handler...)
+}
+
+func (n *Network) registerPOST(path string, handler ...gin.HandlerFunc) gin.IRoutes {
+	return n.engine.POST(path, handler...)
+}
+
+func (n *Network) registerUPDATE(path string, handler ...gin.HandlerFunc) gin.IRoutes {
+	return n.engine.PUT(path, handler...)
+}
+
+func (n *Network) registerDELTE(path string, handler ...gin.HandlerFunc) gin.IRoutes {
+	return n.engine.DELETE(path, handler...)
+}
+
+// Response 형태 맞추기 위한 유틸 함수 입니다.
+
+func (n *Network) okResponse(c *gin.Context, result interface{}) {
+	c.JSON(200, result)
+} //okResponse가 실행되면 200코드와 result인터페이스를 리턴함
+
+func (n *Network) failedResponse(c *gin.Context, result interface{}) {
+	c.JSON(400, result)
+}
+```
+
+```go
+// types/utils.go
+package types
+
+type ApiResponse struct {
+	Result      int64  `json:"result"`
+	Description string `json:"description"`
+}
+//ApiResponse를 정의함
+```
+
+```go
+// types/user.go
+package types
+
+type User struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+type UserResponse struct {
+	*ApiResponse
+	*User
+}
+//UserResponse는 User 구조체와 ApiResponse구조체를 갖고있는다.
+```
+이렇게 Api 전송할때 쓸 인터페이스를 정의하고
+
+```go
+// network/user.go 중 크리에이트 함수
+func (u *userRouter) create(c *gin.Context) {
+	//함수명을 시작할때 첫글자를 대문자로 쓰면 다른 레포지스토리나 디렉토리에서도 접근가능
+	//하지만 이 함수는 이 파일에서만 돌아가야 하기 때문에 create
+	fmt.Println("create")
+
+	u.router.okResponse(c, &types.UserResponse{
+		ApiResponse: &types.ApiResponse{
+			Result:      1,
+			Description: "성공입니다.",
+		},
+		User: nil,
+	})
+	// userRouter안에 라우터안에 okResponse를 보낸다. 보낼때 아까 types에서 정의한 유틸함수들을 리턴한다.
+}
 ```
