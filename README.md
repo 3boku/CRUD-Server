@@ -346,3 +346,237 @@ func (u *userRouter) create(c *gin.Context) {
 	// userRouter안에 라우터안에 okResponse를 보낸다. 보낼때 아까 types에서 정의한 유틸함수들을 리턴한다.
 }
 ```
+
+## 8번째 영상
+```go
+// types/utils.go
+//각 리스폰스마다의 타입을 지정해주었다.
+package types
+
+type User struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+type UserResponse struct {
+	*ApiResponse
+	*User
+}
+
+type GetUserResponse struct {
+	*ApiResponse
+	*User
+}
+
+type CreateUserResponse struct {
+	*ApiResponse
+	*User
+}
+
+type UpdateUserResponse struct {
+	*ApiResponse
+	*User
+}
+
+type DeleteUserResponse struct {
+	*ApiResponse
+	*User
+}
+```
+
+```go
+//network/user.go 중
+func (u *userRouter) create(c *gin.Context) {
+	//함수명을 시작할때 첫글자를 대문자로 쓰면 다른 레포지스토리나 디렉토리에서도 접근가능
+	//하지만 이 함수는 이 파일에서만 돌아가야 하기 때문에 create
+	fmt.Println("create")
+
+	u.router.okResponse(c, &types.CreateUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+		User:        nil,
+	})
+}
+
+func (u *userRouter) get(c *gin.Context) {
+	fmt.Println("get")
+
+	u.router.okResponse(c, &types.GetUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+	})
+}
+
+func (u *userRouter) update(c *gin.Context) {
+	fmt.Println("update")
+
+	u.router.okResponse(c, &types.UpdateUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+	})
+}
+
+func (u *userRouter) delete(c *gin.Context) {
+	fmt.Println("delete")
+
+	u.router.okResponse(c, &types.DeleteUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+	})
+}
+```
+그리고 service와 network, repository를 연결해주겠다
+```go
+//service/root.go
+import (
+	"github.com/3boku/Go-Server/repository"
+	"sync"
+)
+
+// Network와 Repository의 다리 역할
+
+var (
+	serviceInit     sync.Once
+	serviceInstance *Service
+)
+
+type Service struct {
+	repository *repository.Repository
+	//repository
+
+	User *User
+}
+
+func NewService(rep *repository.Repository) *Service {
+	serviceInit.Do(func() {
+		serviceInstance = &Service{
+			repository: rep,
+		}
+
+		serviceInstance.User = newUserService(rep.User)
+	})
+
+	return serviceInstance
+}
+```
+```go
+//repository/root.go
+package repository
+
+import (
+	"sync"
+)
+
+var (
+	repositoryInit     sync.Once
+	repositoryInstance *Repository
+)
+
+type Repository struct {
+	//repository 이곳에선 데이터베이스 같은것들을 설정해줌
+	User *UserRepository
+}
+
+func NewRepository() *Repository {
+	repositoryInit.Do(func() {
+		repositoryInstance = &Repository{
+			User: NewUserRepository(),
+		}
+	})
+
+	return repositoryInstance
+}
+
+```
+대충 레포지스토리랑 네트워크의 다리 역할을 서비스가 하고, 레포지스토리의 유저가 db역할을 하며 왔다 갔다 하는 코드임
+
+## 9번째 영상
+```go
+//repository/user.go
+func (u *UserRepository) Create(newUser *types.User) error {
+	return nil
+}
+
+func (u *UserRepository) Update(beforUser *types.User, updatedUser *types.User) error {
+	return nil
+}
+
+func (u *UserRepository) Delete(newUser *types.User) error {
+	return nil
+}
+
+func (u *UserRepository) Get() []*types.User {
+	return u.userMap
+}
+
+```
+이런 메소드를 만들어서
+```go
+/service/user.go
+func (u *User) Create(newUser *types.User) error {
+	return u.userRepository.Create(newUser)
+}
+
+func (u *User) Update(beforUser *types.User, updatedUser *types.User) error {
+	return u.userRepository.Update(beforUser, updatedUser)
+}
+
+func (u *User) Delete(user *types.User) error {
+	return u.userRepository.Delete(user)
+}
+
+func (u *User) Get() []*types.User {
+	return u.userRepository.Get()
+}
+
+```
+서비스로 넘겨준걸
+```go
+//network/user.go
+func (u *userRouter) create(c *gin.Context) {
+	//함수명을 시작할때 첫글자를 대문자로 쓰면 다른 레포지스토리나 디렉토리에서도 접근가능
+	//하지만 이 함수는 이 파일에서만 돌아가야 하기 때문에 create
+	fmt.Println("create")
+
+	u.userService.Create(nil)
+
+	u.router.okResponse(c, &types.CreateUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+		User:        nil,
+	})
+}
+
+func (u *userRouter) get(c *gin.Context) {
+	fmt.Println("get")
+
+	u.router.okResponse(c, &types.GetUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+		Users:       u.userService.Get(),
+	})
+}
+
+func (u *userRouter) update(c *gin.Context) {
+	fmt.Println("update")
+
+	u.userService.Update(nil, nil)
+
+	u.router.okResponse(c, &types.UpdateUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+	})
+}
+
+func (u *userRouter) delete(c *gin.Context) {
+	fmt.Println("delete")
+
+	u.userService.Delete(nil)
+
+	u.router.okResponse(c, &types.DeleteUserResponse{
+		ApiResponse: types.NewApiResponse("성공입니다.", 1),
+	})
+}
+```
+유저로 넘겨주었다.
+
+## 10번쨰 영상
+서비스 추가했다. 코드가 너무 길어서 각 폴더에 user.go확인하면 될듯
+
+## 11번째 영상
+Post Man쓰는이유 API확인을 위해
+고랭에서 스웨거 안쓰고 Post Man 쓰는이유: 지원 안하는 버전도 있음
+
